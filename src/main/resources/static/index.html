@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiERP | Plataforma Empresarial Multi-Tenant & IA</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="erp-layout">
+    <!-- BARRA LATERAL DINÁMICA (Se adapta según los módulos activos de la empresa) -->
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-logo">M</div>
+            <div>
+                <h1>MiERP</h1>
+                <span class="badge-version">v1.0 Enterprise</span>
+            </div>
+        </div>
+
+        <div class="tenant-selector-box">
+            <label for="tenantSelect">EMPRESA ACTIVA (TENANT)</label>
+            <select id="tenantSelect" onchange="cambiarEmpresaActiva()"></select>
+            <button class="btn-outline-sm" onclick="mostrarVista('onboarding')">+ Nueva Empresa (Onboarding)</button>
+        </div>
+
+        <nav class="nav-menu">
+            <div class="nav-section">NÚCLEO & ANÁLISIS</div>
+            <a href="#" class="nav-item active" data-view="dashboard" onclick="mostrarVista('dashboard')">
+                <span>📊</span> Dashboard & BI
+            </a>
+            <a href="#" class="nav-item" data-view="catalogo" onclick="mostrarVista('catalogo')">
+                <span>🧩</span> Matriz 66 Módulos <span id="badgeModulosCount" class="nav-badge">0/66</span>
+            </a>
+            <a href="#" class="nav-item" data-view="ia" data-mod="M52_ASISTENTE_IA" onclick="mostrarVista('ia')">
+                <span>🤖</span> Copiloto IA <span class="tag-ia">IA</span>
+            </a>
+
+            <div class="nav-section">OPERACIONES COMERCIALES</div>
+            <a href="#" class="nav-item" data-view="ventas" data-mod="M06_VENTAS" onclick="mostrarVista('ventas')">
+                <span>🧾</span> Ventas & ARCA
+            </a>
+            <a href="#" class="nav-item" data-view="inventario" data-mod="M18_INVENTARIO_STOCK" onclick="mostrarVista('inventario')">
+                <span>📦</span> Stock & Depósitos
+            </a>
+            <a href="#" class="nav-item" data-view="compras" data-mod="M13_COMPRAS" onclick="mostrarVista('compras')">
+                <span>🚚</span> Compras & Proveedores
+            </a>
+
+            <div class="nav-section">GESTIÓN CORPORATIVA</div>
+            <a href="#" class="nav-item" data-view="finanzas" data-mod="M26_CONTABILIDAD_GENERAL" onclick="mostrarVista('finanzas')">
+                <span>⚖️</span> Contabilidad & Caja
+            </a>
+            <a href="#" class="nav-item" data-view="rrhh" data-mod="M34_GESTION_EMPLEADOS" onclick="mostrarVista('rrhh')">
+                <span>👥</span> Recursos Humanos
+            </a>
+            <a href="#" class="nav-item" data-view="produccion" data-mod="M40_GESTION_PRODUCCION" onclick="mostrarVista('produccion')">
+                <span>🏭</span> Producción (MRP/BOM)
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div id="apiStatusIndicator" class="status-pill online">● Backend Java Conectado</div>
+            <small>© 2026 Tomás Godoy<br>Todos los derechos reservados</small>
+        </div>
+    </aside>
+
+    <!-- ÁREA PRINCIPAL DE CONTENIDO -->
+    <main class="main-content">
+        <!-- Barra Superior -->
+        <header class="topbar">
+            <div>
+                <h2 id="vistaTitulo">Panel Central & Business Intelligence</h2>
+                <p id="vistaSubtitulo" class="text-muted">Indicadores ejecutivos en tiempo real, alertas y pronósticos</p>
+            </div>
+            <div class="topbar-Right">
+                <span id="infoFiscalTenant" class="fiscal-pill">CUIT: -- | --</span>
+            </div>
+        </header>
+
+        <!-- 1. VISTA: DASHBOARD PRINCIPAL (Módulo 1 y 47-51) -->
+        <section id="vista-dashboard" class="vista-section active">
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <span class="kpi-label">Facturación Acumulada (M06)</span>
+                    <h3 id="kpiVentas">$0,00</h3>
+                    <small id="kpiCantidadFacturas" class="kpi-sub">0 comprobantes emitidos</small>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">Pronóstico Próximo Mes (M50)</span>
+                    <h3 id="kpiProyeccion" class="text-accent">$0,00</h3>
+                    <small class="kpi-sub">Tendencia proyectada +12%</small>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">Cuentas a Cobrar Clientes (M08)</span>
+                    <h3 id="kpiPorCobrar" class="text-success">$0,00</h3>
+                    <small class="kpi-sub">Saldo activo en Cta. Cte.</small>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">Deuda con Proveedores (M15)</span>
+                    <h3 id="kpiPorPagar" class="text-warning">$0,00</h3>
+                    <small class="kpi-sub">Órdenes recibidas pendientes</small>
+                </div>
+            </div>
+
+            <div class="grid-2-cols">
+                <div class="card">
+                    <div class="card-header">
+                        <h4>🚨 Centro de Alertas Inteligentes (Módulo 54)</h4>
+                    </div>
+                    <ul id="listaAlertasDashboard" class="alert-list"></ul>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h4>⚡ Accesos Rápidos según Perfil de Empresa</h4>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="btn-primary" onclick="mostrarVista('ventas')">Emitir Factura Electrónica ARCA</button>
+                        <button class="btn-secondary" onclick="mostrarVista('inventario')">Nuevo Artículo / Stock</button>
+                        <button class="btn-secondary" onclick="mostrarVista('ia')">Consultar al Copiloto IA</button>
+                        <button class="btn-secondary" onclick="mostrarVista('catalogo')">Ver 66 Módulos del Sistema</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. VISTA: ONBOARDING DE EMPRESA (Motor Dinámico) -->
+        <section id="vista-onboarding" class="vista-section">
+            <div class="card">
+                <div class="card-header">
+                    <h4>🚀 Wizard de Onboarding Inteligente — Alta de Empresa</h4>
+                    <p class="text-muted">Al guardar, <code>ConfiguradorModulosService</code> evaluará las características de la empresa y activará sus módulos ideales sobre los 66 disponibles.</p>
+                </div>
+                <form id="formOnboarding" onsubmit="registrarNuevaEmpresa(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Razón Social *</label>
+                            <input type="text" id="empRazonSocial" required placeholder="Ej: Metalúrgica Misiones S.A.">
+                        </div>
+                        <div class="form-group">
+                            <label>Nombre de Fantasía</label>
+                            <input type="text" id="empFantasia" placeholder="Ej: MetaMis">
+                        </div>
+                        <div class="form-group">
+                            <label>CUIT (11 dígitos) *</label>
+                            <input type="text" id="empCuit" required placeholder="30-71234567-9">
+                        </div>
+                        <div class="form-group">
+                            <label>Condición frente al IVA (ARCA) *</label>
+                            <select id="empIva">
+                                <option value="RESPONSABLE_INSCRIPTO">Responsable Inscripto</option>
+                                <option value="MONOTRIBUTO">Monotributo</option>
+                                <option value="EXENTO">Exento</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tamaño / Envergadura *</label>
+                            <select id="empTamano">
+                                <option value="MICRO">Microemprendimiento</option>
+                                <option value="PYME" selected>PyME</option>
+                                <option value="MEDIANA">Empresa Mediana</option>
+                                <option value="GRAN_EMPRESA">Gran Empresa / Corporación</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <h5 class="section-subtitle">Características Operativas (Activan módulos automáticamente):</h5>
+                    <div class="checkbox-grid">
+                        <label class="check-card">
+                            <input type="checkbox" id="chkPos" checked>
+                            <div>
+                                <strong>Atención en Mostrador / POS</strong>
+                                <small>Activa Caja Rápida (M10) y Códigos de Barra/QR (M23)</small>
+                            </div>
+                        </label>
+                        <label class="check-card">
+                            <input type="checkbox" id="chkStock" checked>
+                            <div>
+                                <strong>Maneja Mercadería Física y Depósitos</strong>
+                                <small>Activa Stock en Tiempo Real (M18-M22) y Alertas (M54)</small>
+                            </div>
+                        </label>
+                        <label class="check-card">
+                            <input type="checkbox" id="chkManufactura">
+                            <div>
+                                <strong>Fábrica / Industria / Producción</strong>
+                                <small>Activa Fórmulas BOM, MRP, Calidad y Lotes (M21, M40-M46)</small>
+                            </div>
+                        </label>
+                        <label class="check-card">
+                            <input type="checkbox" id="chkEmpleados">
+                            <div>
+                                <strong>Personal en Relación de Dependencia</strong>
+                                <small>Activa Legajos, Liquidación de Sueldos y Asistencia (M11, M34-M37)</small>
+                            </div>
+                        </label>
+                        <label class="check-card">
+                            <input type="checkbox" id="chkFlota">
+                            <div>
+                                <strong>Logística y Flota de Vehículos Propia</strong>
+                                <small>Activa Despacho, Ruteo y Mantenimiento de Flota (M24-M25)</small>
+                            </div>
+                        </label>
+                        <label class="check-card">
+                            <input type="checkbox" id="chkContabilidad">
+                            <div>
+                                <strong>Contabilidad Formal, BI Avanzado & IA</strong>
+                                <small>Activa Libro Diario Automático, CRM, BI y Copiloto IA (M26, M47-M56)</small>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Crear Empresa y Autoconfigurar Módulos</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- 3. VISTA: MATRIZ DE LOS 66 MÓDULOS -->
+        <section id="vista-catalogo" class="vista-section">
+            <div class="card">
+                <div class="card-header">
+                    <h4>🧩 Arquitectura Dinámica de los 66 Submódulos</h4>
+                    <p class="text-muted">En verde se muestran los módulos habilitados para la empresa actual; en gris los protegidos por <code>@RequiereModulo</code>.</p>
+                </div>
+                <div id="grid66Modulos" class="modulos-grid"></div>
+            </div>
+        </section>
+
+        <!-- 4. VISTA: ASISTENTE INTELIGENTE CON IA (Módulo 52) -->
+        <section id="vista-ia" class="vista-section">
+            <div class="card">
+                <div class="card-header">
+                    <h4>🤖 Copiloto Ejecutivo con Inteligencia Artificial (Módulo 52)</h4>
+                    <p class="text-muted">Consulta en lenguaje natural el estado de ventas, stock crítico, deuda con proveedores o proyecciones financieras.</p>
+                </div>
+                <div id="chatIaHistorial" class="ia-chat-box">
+                    <div class="ia-msg bot">
+                        Hola, soy el Asistente Inteligente de <strong>MiERP</strong>. Estoy conectado en tiempo real a los módulos de tu empresa. ¿Qué deseas analizar hoy?
+                    </div>
+                </div>
+                <div class="ia-suggestions">
+                    <button class="chip" onclick="enviarPreguntaRapida('¿Cómo vienen las ventas y cuál es el pronóstico del próximo mes?')">📈 Analizar Ventas y Pronóstico</button>
+                    <button class="chip" onclick="enviarPreguntaRapida('¿Tenemos alertas de stock crítico en los depósitos?')">📦 Revisar Stock Crítico</button>
+                    <button class="chip" onclick="enviarPreguntaRapida('Dame un diagnóstico financiero integral de la empresa')">⚖️ Diagnóstico Integral</button>
+                </div>
+                <form onsubmit="consultarAsistenteIA(event)" class="ia-input-row">
+                    <input type="text" id="inputPreguntaIA" required placeholder="Escribe tu consulta gerencial aquí...">
+                    <button type="submit" class="btn-primary">Analizar con IA</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- 5. VISTA: INVENTARIO Y PRODUCTOS (Módulo 18) -->
+        <section id="vista-inventario" class="vista-section">
+            <div class="grid-2-cols">
+                <div class="card">
+                    <div class="card-header"><h4>➕ Alta de Producto / Artículo (M18 & M23)</h4></div>
+                    <form onsubmit="crearProducto(event)">
+                        <div class="form-group">
+                            <label>Código SKU *</label>
+                            <input type="text" id="prodSku" required placeholder="Ej: ART-1001">
+                        </div>
+                        <div class="form-group">
+                            <label>Código de Barras EAN13 / QR (M23)</label>
+                            <input type="text" id="prodBarra" placeholder="7791234567890">
+                        </div>
+                        <div class="form-group">
+                            <label>Nombre del Producto / Servicio *</label>
+                            <input type="text" id="prodNombre" required placeholder="Ej: Monitor Industrial 24 Pulgadas">
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Costo Reposición ($) *</label>
+                                <input type="number" step="0.01" id="prodCosto" required value="120000">
+                            </div>
+                            <div class="form-group">
+                                <label>Precio Venta Neto ($) *</label>
+                                <input type="number" step="0.01" id="prodPrecio" required value="185000">
+                            </div>
+                            <div class="form-group">
+                                <label>Alícuota IVA (%)</label>
+                                <select id="prodIva">
+                                    <option value="21.00">21%</option>
+                                    <option value="10.50">10.5%</option>
+                                    <option value="0.00">0% (Exento)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Stock Mínimo Alerta (M54)</label>
+                                <input type="number" id="prodMinimo" value="5">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary">Guardar en Catálogo</button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h4>📋 Catálogo de Artículos Activos</h4></div>
+                    <table class="erp-table">
+                        <thead>
+                        <tr><th>SKU</th><th>Descripción</th><th>Costo</th><th>Precio + IVA</th></tr>
+                        </thead>
+                        <tbody id="tablaProductos"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. VISTA: VENTAS Y FACTURACIÓN ELECTRÓNICA ARCA (Módulos 6, 8 y 9) -->
+        <section id="vista-ventas" class="vista-section">
+            <div class="grid-2-cols">
+                <div class="card">
+                    <div class="card-header"><h4>🧾 Emitir Comprobante Electrónico ARCA (M06 & M09)</h4></div>
+                    <form onsubmit="emitirFacturaVenta(event)">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Tipo de Comprobante</label>
+                                <select id="vtaTipo">
+                                    <option value="FACTURA_A">Factura Electrónica A</option>
+                                    <option value="FACTURA_B">Factura Electrónica B</option>
+                                    <option value="FACTURA_C">Factura Electrónica C</option>
+                                    <option value="PRESUPUESTO">Presupuesto Comercial</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Cliente</label>
+                                <input type="text" id="vtaClienteNombre" required value="Distribuidora Litoral S.R.L.">
+                            </div>
+                            <div class="form-group">
+                                <label>Concepto / Producto</label>
+                                <input type="text" id="vtaConcepto" required value="Lote Equipamiento Informático">
+                            </div>
+                            <div class="form-group">
+                                <label>Importe Neto Gravado ($)</label>
+                                <input type="number" step="0.01" id="vtaNeto" required value="250000">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary">Autorizar CAE en ARCA y Contabilizar</button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h4>📑 Comprobantes Emitidos y CAE ARCA</h4></div>
+                    <table class="erp-table">
+                        <thead>
+                        <tr><th>Comprobante</th><th>Neto</th><th>IVA (21%)</th><th>Total</th><th>CAE ARCA</th></tr>
+                        </thead>
+                        <tbody id="tablaVentas"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. VISTA: COMPRAS Y PROVEEDORES (Módulos 13 al 17) -->
+        <section id="vista-compras" class="vista-section">
+            <div class="card">
+                <div class="card-header">
+                    <h4>🚚 Gestión de Proveedores, Órdenes de Compra y Recepción (M13 - M17)</h4>
+                    <p class="text-muted">Al registrar la recepción conforme, el evento <code>MercaderiaRecibidaEvent</code> actualiza el costo de reposición, suma el stock y genera el asiento en el Libro Diario.</p>
+                </div>
+                <table class="erp-table">
+                    <thead>
+                    <tr><th>Orden #</th><th>Proveedor</th><th>CUIT</th><th>Estado</th><th>Total Estimado</th></tr>
+                    </thead>
+                    <tbody id="tablaCompras"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 8. VISTA: CONTABILIDAD GENERAL Y PARTIDA DOBLE (Módulo 26) -->
+        <section id="vista-finanzas" class="vista-section">
+            <div class="card">
+                <div class="card-header">
+                    <h4>⚖️ Libro Diario General — Motor Automático de Partida Doble (Módulo 26)</h4>
+                    <p class="text-muted">Asientos generados automáticamente por <code>ContabilidadAutomaticaListener</code> al confirmar ventas o compras ($\sum \text{Debe} = \sum \text{Haber}$).</p>
+                </div>
+                <table class="erp-table">
+                    <thead>
+                    <tr><th>Fecha</th><th>Concepto del Asiento</th><th>Origen</th><th>Total Debe</th><th>Total Haber</th></tr>
+                    </thead>
+                    <tbody id="tablaLibroDiario"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 9. VISTA: RECURSOS HUMANOS Y LIQUIDACIÓN DE SUELDOS (Módulos 34 al 39) -->
+        <section id="vista-rrhh" class="vista-section">
+            <div class="card">
+                <div class="card-header">
+                    <h4>👥 Legajos y Liquidación Automática de Haberes de Ley (Módulos 34 y 35)</h4>
+                    <p class="text-muted">Cálculo automático de Antigüedad (1%/año), Presentismo (8.33%) y Retenciones de Ley Argentina (Jubilación 11%, Ley 19.032 3%, Obra Social 3%).</p>
+                </div>
+                <div class="form-grid" style="margin-bottom: 1rem;">
+                    <input type="text" id="rrhhNombre" placeholder="Apellido y Nombre (Ej: Pérez Juan)">
+                    <input type="text" id="rrhhCargo" placeholder="Cargo (Ej: Analista Contable)">
+                    <input type="number" id="rrhhBasico" placeholder="Sueldo Básico Bruto ($)" value="950000">
+                    <button class="btn-primary" onclick="simularLiquidacionSueldo()">Liquidar Recibo de Sueldo</button>
+                </div>
+                <table class="erp-table">
+                    <thead>
+                    <tr><th>Empleado</th><th>Básico + Adic. (Bruto)</th><th>Retenciones (17%)</th><th>Neto a Pagar</th><th>Estado</th></tr>
+                    </thead>
+                    <tbody id="tablaSueldos"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 10. VISTA: PRODUCCIÓN, MRP Y LISTAS DE MATERIALES BOM (Módulos 40 al 46) -->
+        <section id="vista-produccion" class="vista-section">
+            <div class="card">
+                <div class="card-header">
+                    <h4>🏭 Órdenes de Fabricación, Fórmulas BOM y Control de Calidad (Módulos 40 - 46)</h4>
+                    <p class="text-muted">Planificación de materiales (MRP), cálculo de costos industriales y dictamen de calidad de lotes producidos.</p>
+                </div>
+                <table class="erp-table">
+                    <thead>
+                    <tr><th>Orden #</th><th>Fórmula BOM</th><th>Planificado</th><th>Aprobado Calidad</th><th>Costo Lote</th><th>Estado</th></tr>
+                    </thead>
+                    <tbody id="tablaProduccion"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
