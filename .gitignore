@@ -34,3 +34,7 @@ build/
 
 application-secret.properties
 .env
+
+# Archivos locales con credenciales privadas
+application-secret.properties
+**/application-secret.properties

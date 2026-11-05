@@ -1,9 +1,20 @@
-Copyright (c) 2026 Tomás Godoy. Todos los derechos reservados (All Rights Reserved).
+Copyright (c) 2026 Tomás Godoy. Todos los derechos reservados / All Rights Reserved.
 
-Este software y su código fuente asociado ("MiERP") son propiedad exclusiva de Tomás Godoy.
-El código se publica en este repositorio únicamente con fines de demostración técnica y portafolio profesional.
+AVISO LEGAL DE PROPIEDAD INTELECTUAL (ESPAÑOL):
+Este software, incluyendo de manera enunciativa pero no limitativa su código fuente,
+arquitectura de 66 módulos, diseño de base de datos, interfaces gráficas y documentación
+asociada (en adelante, "MiERP"), es propiedad intelectual exclusiva de Tomás Godoy.
 
-Queda estrictamente prohibido, sin la autorización previa y por escrito del autor:
-1. Copiar, modificar, fusionar, publicar o distribuir este código total o parcialmente.
-2. Utilizar este software con fines comerciales, productivos o de lucro.
-3. Sublicenciar, vender o adjudicarse la autoría del sistema o de su arquitectura.
+El código se publica en este repositorio únicamente con fines de exhibición técnica y
+portafolio profesional. Queda estrictamente prohibida cualquier copia, reproducción,
+distribución, modificación, ingeniería inversa, sublicencia o uso comercial o privado,
+total o parcial, sin el consentimiento previo, expreso y por escrito del autor.
+
+PROPRIETARY LICENSE NOTICE (ENGLISH):
+This software and associated documentation files ("MiERP") are the exclusive proprietary
+property of Tomás Godoy. The source code is made available solely for portfolio viewing
+and technical evaluation purposes.
+
+No permission is granted to copy, modify, merge, publish, distribute, sublicense, or
+sell copies of this software, in whole or in part, without explicit prior written
+permission from the copyright holder.
