@@ -1,11 +1,16 @@
 package com.godoytomas.mierp.core.tenant;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+
+import java.lang.reflect.Method;
+import java.util.Set;
 
 @Aspect
 @Component
@@ -17,31 +22,48 @@ public class ValidadorModuloAspect {
         this.empresaRepository = empresaRepository;
     }
 
-    @Before("@within(requiereModulo) || @annotation(requiereModulo)")
-    public void validarAccesoModulo(RequiereModulo requiereModulo) {
-        CodigoModulo moduloRequerido = requiereModulo.value();
+    @Before("@within(com.godoytomas.mierp.core.tenant.RequiereModulo) || @annotation(com.godoytomas.mierp.core.tenant.RequiereModulo)")
+    public void validarAccesoModulo(JoinPoint joinPoint) {
+        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        Method method = signature.getMethod();
 
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        if (attributes == null) {
+        // 1. Buscar la anotación en el método; si no está ahí, buscarla en la clase del controlador/servicio
+        RequiereModulo requiereModulo = method.getAnnotation(RequiereModulo.class);
+        if (requiereModulo == null) {
+            requiereModulo = joinPoint.getTarget().getClass().getAnnotation(RequiereModulo.class);
+        }
+
+        if (requiereModulo == null) {
             return;
         }
 
-        HttpServletRequest request = attributes.getRequest();
-        String empresaIdHeader = request.getHeader("X-Empresa-Id");
+        CodigoModulo moduloRequerido = requiereModulo.value();
 
-        if (empresaIdHeader == null || empresaIdHeader.isBlank()) {
-            throw new ModuloNoHabilitadoException("Debe especificar el encabezado X-Empresa-Id en la petición.");
+        // 2. Obtener el HTTP Request actual para leer el Header X-Empresa-Id
+        ServletRequestAttributes attr = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attr == null) {
+            return;
         }
 
-        Long empresaId = Long.parseLong(empresaIdHeader);
-        Empresa empresa = empresaRepository.findById(empresaId)
-                .orElseThrow(() -> new ModuloNoHabilitadoException("Empresa no encontrada con ID: " + empresaId));
+        HttpServletRequest request = attr.getRequest();
+        String empresaIdHeader = request.getHeader("X-Empresa-Id");
 
-        if (!empresa.getModulosActivos().contains(moduloRequerido)) {
-            throw new ModuloNoHabilitadoException(
-                    "Acceso denegado: La empresa '" + empresa.getRazonSocial() +
-                            "' no tiene habilitado el módulo " + moduloRequerido.name()
-            );
+        Long empresaId = 1L;
+        if (empresaIdHeader != null && !empresaIdHeader.isEmpty()) {
+            try {
+                empresaId = Long.parseLong(empresaIdHeader);
+            } catch (NumberFormatException ignored) {}
+        }
+
+        Empresa empresa = empresaRepository.findById(empresaId).orElse(null);
+        if (empresa == null) {
+            throw new RuntimeException("Empresa no encontrada con ID: " + empresaId);
+        }
+
+        // 3. Validar si la empresa tiene el módulo activo en su Set<CodigoModulo>
+        Set<CodigoModulo> modulosActivos = empresa.getModulosActivos();
+        if (modulosActivos == null || !modulosActivos.contains(moduloRequerido)) {
+            throw new RuntimeException("Acceso denegado: El módulo [" + moduloRequerido.name() + "] no está habilitado para la empresa " + empresa.getRazonSocial());
         }
     }
 }

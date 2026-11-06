@@ -337,19 +337,43 @@ function crearProducto(event) {
     renderizarTablasOperativas();
 }
 
+// Lista de recibos de sueldo liquidados para poder imprimir cualquiera en PDF
+let recibosDemo = [
+    {
+        legajo: "LEG-001",
+        nombre: "Pérez Juan Ignacio",
+        cuil: "20-34891203-9",
+        cargo: "Analista Contable Senior",
+        convenio: "Comercio 130/75",
+        periodo: "2026-11",
+        basico: 950000,
+        antiguedad: 19000,
+        presentismo: 80717,
+        bruto: 1049717,
+        jubilacion: 115469,
+        ley19032: 31492,
+        obraSocial: 31492,
+        retenciones: 178453,
+        neto: 871264
+    }
+];
+
 function emitirFacturaVenta(event) {
     event.preventDefault();
     const tipo = document.getElementById("vtaTipo").value;
+    const cliente = document.getElementById("vtaClienteNombre").value || "Consumidor Final";
+    const concepto = document.getElementById("vtaConcepto").value || "Productos varios";
     const neto = Number(document.getElementById("vtaNeto").value);
-    const iva = Math.round(neto * 0.21);
+    const iva = tipo === "FACTURA_C" ? 0 : Math.round(neto * 0.21);
     const total = neto + iva;
     const cae = tipo === "PRESUPUESTO" ? "NO FISCAL" : String(Math.floor(70000000000000 + Math.random() * 9000000000000));
     const num = `0001-00000${143 + ventasDemo.length}`;
+    const fecha = new Date().toISOString().slice(0, 10);
 
-    ventasDemo.unshift({ tipo, numero: num, neto, iva, total, cae });
+    ventasDemo.unshift({ tipo, numero: num, cliente, concepto, fecha, neto, iva, total, cae });
     asientosDemo.unshift({
-        fecha: new Date().toISOString().slice(0, 10),
-        concepto: `Asiento automático Venta ${tipo} ${num}`,
+        fecha,
+        concepto: `Asiento automático Venta ${tipo} ${num} (${cliente})`,
         origen: `${tipo}-${num}`,
         debe: total,
         haber: total
@@ -361,15 +385,38 @@ function emitirFacturaVenta(event) {
 
 function simularLiquidacionSueldo() {
     const nombre = document.getElementById("rrhhNombre").value || "Gómez Laura (Legajo #014)";
+    const cargo = document.getElementById("rrhhCargo").value || "Administración General";
     const basico = Number(document.getElementById("rrhhBasico").value) || 950000;
-    const bruto = Math.round(basico * 1.0933); // Básico + Antigüedad + Presentismo 8.33%
-    const retenciones = Math.round(bruto * 0.17); // 11% Jub + 3% Ley 19032 + 3% OS
+
+    const antiguedad = Math.round(basico * 0.01); // 1% antigüedad base
+    const presentismo = Math.round((basico + antiguedad) * 0.0833); // 8.33% CCT 130/75
+    const bruto = basico + antiguedad + presentismo;
+
+    const jubilacion = Math.round(bruto * 0.11);
+    const ley19032 = Math.round(bruto * 0.03);
+    const obraSocial = Math.round(bruto * 0.03);
+    const retenciones = jubilacion + ley19032 + obraSocial;
     const neto = bruto - retenciones;
 
-    const tbody = document.getElementById("tablaSueldos");
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${nombre}</td><td>$${bruto.toLocaleString("es-AR")}</td><td class="text-warning">-$${retenciones.toLocaleString("es-AR")}</td><td class="text-success"><strong>$${neto.toLocaleString("es-AR")}</strong></td><td>LIQUIDADO</td>`;
-    tbody.prepend(tr);
+    recibosDemo.unshift({
+        legajo: `LEG-00${recibosDemo.length + 1}`,
+        nombre,
+        cuil: "27-38192837-4",
+        cargo,
+        convenio: "Comercio 130/75",
+        periodo: new Date().toISOString().slice(0, 7),
+        basico,
+        antiguedad,
+        presentismo,
+        bruto,
+        jubilacion,
+        ley19032,
+        obraSocial,
+        retenciones,
+        neto
+    });
+
+    renderizarTablasOperativas();
 }
 
 function renderizarTablasOperativas() {
@@ -379,8 +426,26 @@ function renderizarTablasOperativas() {
         `<tr><td><code>${p.sku}</code></td><td>${p.nombre}</td><td>${fmt(p.costoReposicion)}</td><td class="text-accent"><strong>${fmt(p.precioVentaBase * (1 + p.alicuotaIva / 100))}</strong></td></tr>`
     ).join("");
 
-    document.getElementById("tablaVentas").innerHTML = ventasDemo.map(v =>
-        `<tr><td><strong>${v.tipo}</strong> ${v.numero}</td><td>${fmt(v.neto)}</td><td>${fmt(v.iva)}</td><td class="text-success"><strong>${fmt(v.total)}</strong></td><td><code>${v.cae}</code></td></tr>`
+    document.getElementById("tablaVentas").innerHTML = ventasDemo.map((v, idx) =>
+        `<tr>
+            <td><strong>${v.tipo}</strong> ${v.numero}<br><small class="text-muted">${v.cliente || "Distribuidora Litoral S.R.L."}</small></td>
+            <td>${fmt(v.neto)}</td>
+            <td>${fmt(v.iva)}</td>
+            <td class="text-success"><strong>${fmt(v.total)}</strong></td>
+            <td><code>${v.cae}</code></td>
+            <td><button class="btn-outline-sm" onclick="imprimirFacturaPDF(${idx})">🖨️ PDF</button></td>
+        </tr>`
+    ).join("");
+
+    document.getElementById("tablaSueldos").innerHTML = recibosDemo.map((r, idx) =>
+        `<tr>
+            <td><strong>${r.nombre}</strong><br><small class="text-muted">${r.cargo} (${r.periodo})</small></td>
+            <td>${fmt(r.bruto)}</td>
+            <td class="text-warning">-${fmt(r.retenciones)}</td>
+            <td class="text-success"><strong>${fmt(r.neto)}</strong></td>
+            <td><span class="badge-version">LIQUIDADO</span></td>
+            <td><button class="btn-outline-sm" onclick="imprimirReciboSueldoPDF(${idx})">🖨️ PDF</button></td>
+        </tr>`
     ).join("");
 
     document.getElementById("tablaLibroDiario").innerHTML = asientosDemo.map(a =>
@@ -395,6 +460,211 @@ function renderizarTablasOperativas() {
     document.getElementById("tablaProduccion").innerHTML = `
         <tr><td><code>OP-2026-0014</code></td><td>Fórmula Estándar Estructura Metálica BOM v2</td><td>50 UN</td><td class="text-success">49 UN (1 Merma)</td><td>$3.450.000</td><td>FINALIZADA (Calidad OK)</td></tr>
     `;
+}
+
+// =========================================================================
+// GENERADOR DE FACTURA ELECTRÓNICA ARCA (EX-AFIP) CON QR E IMPRESIÓN PDF
+// =========================================================================
+function imprimirFacturaPDF(index) {
+    const v = ventasDemo[index];
+    if (!v || !empresaActual) return;
+
+    const letra = v.tipo.includes("_") ? v.tipo.split("_")[1] : "X";
+    const codArca = letra === "A" ? "COD. 001" : (letra === "B" ? "COD. 006" : (letra === "C" ? "COD. 011" : "NO FISCAL"));
+    const fmt = n => "$" + Number(n).toLocaleString("es-AR", { minimumFractionDigits: 2 });
+
+    const ventana = window.open("", "_blank", "width=850,height=900");
+    ventana.document.write(`
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <title>${v.tipo} ${v.numero} - ${empresaActual.razonSocial}</title>
+            <style>
+                body { font-family: Arial, sans-serif; color: #111; margin: 30px; }
+                .factura-box { border: 2px solid #000; padding: 20px; max-width: 780px; margin: auto; }
+                .header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 15px; position: relative; }
+                .letra-box { border: 2px solid #000; width: 65px; height: 65px; text-align: center; background: #f8f9fa; }
+                .letra-box h1 { margin: 4px 0 0; font-size: 36px; }
+                .letra-box small { font-size: 9px; font-weight: bold; }
+                .cliente-box { border-bottom: 1px solid #000; padding: 12px 0; font-size: 13px; display: flex; justify-content: space-between; }
+                table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
+                th { background: #e2e8f0; border: 1px solid #000; padding: 8px; text-align: left; }
+                td { border: 1px solid #ccc; padding: 10px 8px; }
+                .totales { text-align: right; margin-top: 20px; font-size: 14px; }
+                .totales h3 { font-size: 20px; margin-top: 8px; }
+                .footer-arca { display: flex; justify-content: space-between; align-items: center; border-top: 2px solid #000; padding-top: 15px; margin-top: 25px; font-size: 12px; }
+                .qr-sim { width: 85px; height: 85px; border: 2px solid #000; display: flex; align-items: center; justify-content: center; font-size: 10px; text-align: center; font-weight: bold; background: repeating-linear-gradient(45deg, #eee, #eee 5px, #fff 5px, #fff 10px); }
+                @media print { .no-print { display: none; } }
+            </style>
+        </head>
+        <body>
+            <div class="no-print" style="text-align:center; margin-bottom:15px;">
+                <button onclick="window.print()" style="padding:10px 20px; background:#2563eb; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">🖨️ Imprimir o Guardar como PDF</button>
+            </div>
+            <div class="factura-box">
+                <div class="header">
+                    <div style="width:42%;">
+                        <h2 style="margin:0 0 6px;">${empresaActual.razonSocial}</h2>
+                        <p style="margin:3px 0; font-size:12px;"><strong>Condición IVA:</strong> ${empresaActual.condicionIva}</p>
+                        <p style="margin:3px 0; font-size:12px;"><strong>Domicilio Comercial:</strong> Av. Mitre 1250 - Posadas, Misiones</p>
+                    </div>
+                    <div class="letra-box">
+                        <h1>${letra}</h1>
+                        <small>${codArca}</small>
+                    </div>
+                    <div style="width:42%; text-align:right;">
+                        <h2 style="margin:0 0 6px;">${v.tipo.replace("_", " ")}</h2>
+                        <p style="margin:3px 0; font-size:13px;"><strong>Nro: ${v.numero}</strong></p>
+                        <p style="margin:3px 0; font-size:12px;"><strong>Fecha de Emisión:</strong> ${v.fecha || "2026-11-05"}</p>
+                        <p style="margin:3px 0; font-size:12px;"><strong>CUIT Emisor:</strong> ${empresaActual.cuit}</p>
+                        <p style="margin:3px 0; font-size:12px;"><strong>Ingresos Brutos:</strong> ${empresaActual.cuit}</p>
+                    </div>
+                </div>
+
+                <div class="cliente-box">
+                    <div>
+                        <strong>Cliente / Razón Social:</strong> ${v.cliente || "Distribuidora Litoral S.R.L."}<br>
+                        <strong>Condición frente al IVA:</strong> IVA Responsable Inscripto
+                    </div>
+                    <div style="text-align:right;">
+                        <strong>CUIT Receptor:</strong> 30-71009988-2<br>
+                        <strong>Condición de Venta:</strong> Cuenta Corriente / Contado
+                    </div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr><th>Código</th><th>Descripción / Concepto</th><th>Cant.</th><th>Precio Unit. Neto</th><th>Alíc. IVA</th><th>Subtotal c/IVA</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>ITEM-01</td>
+                            <td>${v.concepto || "Equipamiento y Servicios Empresariales"}</td>
+                            <td>1.00 UN</td>
+                            <td>${fmt(v.neto)}</td>
+                            <td>${v.iva > 0 ? "21.00%" : "0.00%"}</td>
+                            <td><strong>${fmt(v.total)}</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="totales">
+                    <p>Importe Neto Gravado: <strong>${fmt(v.neto)}</strong></p>
+                    <p>IVA 21%: <strong>${fmt(v.iva)}</strong></p>
+                    <p>Otros Tributos: <strong>$0,00</strong></p>
+                    <h3>IMPORTE TOTAL: ${fmt(v.total)}</h3>
+                </div>
+
+                <div class="footer-arca">
+                    <div class="qr-sim">CÓDIGO QR<br>OFICIAL<br>ARCA</div>
+                    <div>
+                        <strong>ARCA — Comprobante Autorizado</strong><br>
+                        <small>Esta Administración no se responsabiliza por los datos ingresados en el detalle de la operación.</small><br>
+                        <small>Sistema ERP: <strong>MiERP Enterprise © Tomás Godoy</strong></small>
+                    </div>
+                    <div style="text-align:right;">
+                        <strong>CAE N°:</strong> ${v.cae}<br>
+                        <strong>Fecha Vto. CAE:</strong> 2026-11-15
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+    `);
+    ventana.document.close();
+}
+
+// =========================================================================
+// GENERADOR DE RECIBO DE SUELDO DE LEY ARGENTINA (ART. 140 LCT) EN PDF
+// =========================================================================
+function imprimirReciboSueldoPDF(index) {
+    const r = recibosDemo[index];
+    if (!r || !empresaActual) return;
+
+    const fmt = n => "$" + Number(n).toLocaleString("es-AR", { minimumFractionDigits: 2 });
+
+    const ventana = window.open("", "_blank", "width=850,height=850");
+    ventana.document.write(`
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <title>Recibo de Haberes ${r.periodo} - ${r.nombre}</title>
+            <style>
+                body { font-family: Arial, sans-serif; color: #111; margin: 30px; }
+                .recibo-box { border: 2px solid #000; padding: 20px; max-width: 780px; margin: auto; }
+                .header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 12px; }
+                .emp-info { border-bottom: 1px solid #000; padding: 10px 0; font-size: 13px; display: flex; justify-content: space-between; }
+                table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 13px; }
+                th { background: #e2e8f0; border: 1px solid #000; padding: 8px; text-align: left; }
+                td { border: 1px solid #ccc; padding: 8px; }
+                .firmas { display: flex; justify-content: space-between; margin-top: 55px; text-align: center; font-size: 12px; }
+                .linea-firma { border-top: 1px solid #000; width: 240px; padding-top: 6px; }
+                @media print { .no-print { display: none; } }
+            </style>
+        </head>
+        <body>
+            <div class="no-print" style="text-align:center; margin-bottom:15px;">
+                <button onclick="window.print()" style="padding:10px 20px; background:#10b981; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">🖨️ Imprimir o Guardar Recibo en PDF</button>
+            </div>
+            <div class="recibo-box">
+                <div class="header">
+                    <div>
+                        <h2 style="margin:0;">${empresaActual.razonSocial}</h2>
+                        <small>CUIT Empleador: ${empresaActual.cuit} | Posadas, Misiones</small>
+                    </div>
+                    <div style="text-align:right;">
+                        <h3 style="margin:0;">RECIBO DE HABERES (Ley N° 20.744)</h3>
+                        <small>Período Liquidado: <strong>${r.periodo}</strong></small>
+                    </div>
+                </div>
+
+                <div class="emp-info">
+                    <div>
+                        <strong>Empleado/a:</strong> ${r.nombre}<br>
+                        <strong>CUIL:</strong> ${r.cuil} | <strong>Legajo:</strong> ${r.legajo}
+                    </div>
+                    <div style="text-align:right;">
+                        <strong>Categoría / Cargo:</strong> ${r.cargo}<br>
+                        <strong>Convenio Colectivo:</strong> ${r.convenio}
+                    </div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr><th>Concepto</th><th>Unidades / %</th><th>Haberes c/ Aporte</th><th>Retenciones / Descuentos</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>001 - Sueldo Básico Mensual</td><td>30 días</td><td>${fmt(r.basico)}</td><td>-</td></tr>
+                        <tr><td>002 - Adicional por Antigüedad</td><td>1.00%</td><td>${fmt(r.antiguedad)}</td><td>-</td></tr>
+                        <tr><td>003 - Adicional Presentismo (Art. 40 CCT)</td><td>8.33%</td><td>${fmt(r.presentismo)}</td><td>-</td></tr>
+                        <tr><td>101 - Jubilación (SIPA Ley 24.241)</td><td>11.00%</td><td>-</td><td>${fmt(r.jubilacion)}</td></tr>
+                        <tr><td>102 - INSSJP / PAMI (Ley 19.032)</td><td>3.00%</td><td>-</td><td>${fmt(r.ley19032)}</td></tr>
+                        <tr><td>103 - Obra Social Nacional</td><td>3.00%</td><td>-</td><td>${fmt(r.obraSocial)}</td></tr>
+                    </tbody>
+                    <tfoot>
+                        <tr style="background:#f8fafc; font-weight:bold;">
+                            <td colspan="2">SUBTOTALES</td>
+                            <td>${fmt(r.bruto)}</td>
+                            <td>-${fmt(r.retenciones)}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <div style="text-align:right; font-size:18px; margin-top:10px;">
+                    <strong>NETO A COBRAR (Acreditación Bancaria CBU): ${fmt(r.neto)}</strong>
+                </div>
+
+                <div class="firmas">
+                    <div class="linea-firma">Firma del Empleador<br><strong>${empresaActual.razonSocial}</strong></div>
+                    <div class="linea-firma">Firma de Conformidad del Empleado<br><small>Recibí duplicado e importe neto</small></div>
+                </div>
+            </div>
+        </body>
+        </html>
+    `);
+    ventana.document.close();
 }
 
 function enviarPreguntaRapida(texto) {
